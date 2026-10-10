@@ -1,5 +1,11 @@
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 import {
+  SEED_CATEGORIES,
+  SEED_INGREDIENTS,
+  SEED_ITEMS,
+  SEED_RECIPES,
+} from '@/lib/seed'
+import {
   ORDER_TRANSITIONS,
   type AdminProfile,
   type CustomerSummary,
@@ -338,11 +344,28 @@ function bindRealtime() {
   }
 }
 
+function applySeedFallback(reason: string | null = null) {
+  const session = loadSession()
+  cache = {
+    categories: structuredClone(SEED_CATEGORIES),
+    items: structuredClone(SEED_ITEMS),
+    ingredients: structuredClone(SEED_INGREDIENTS),
+    recipes: structuredClone(SEED_RECIPES),
+    orders: [],
+    customers: [],
+    staffRole: session.staffRole,
+    adminProfile: session.adminProfile,
+    hydrated: true,
+    hydrateError: reason,
+  }
+  bumpRag()
+  notify()
+}
+
 export async function refreshLiveData(): Promise<void> {
   if (!isSupabaseConfigured()) {
-    cache.hydrateError = 'Supabase keys missing in .env'
-    cache.hydrated = true
-    notify()
+    // Production without Vercel env vars → still show the full seeded menu.
+    applySeedFallback(null)
     return
   }
 
@@ -371,12 +394,20 @@ export async function refreshLiveData(): Promise<void> {
     events.error
 
   if (firstError) {
-    cache.hydrateError = firstError.message
-    cache.hydrated = true
-    cache.staffRole = session.staffRole
-    cache.adminProfile = session.adminProfile
-    notify()
+    applySeedFallback(firstError.message)
     throw new Error(firstError.message)
+  }
+
+  const remoteItems = (items.data ?? []).map((row) => ({
+    ...(row as MenuItem),
+    description: (row as MenuItem).description ?? '',
+  }))
+  const remoteCategories = (cats.data ?? []) as MenuCategory[]
+
+  // Empty Supabase project → seed menu so production is never blank.
+  if (remoteItems.length === 0) {
+    applySeedFallback(null)
+    return
   }
 
   const assembled = assembleOrders(
@@ -395,11 +426,8 @@ export async function refreshLiveData(): Promise<void> {
   }
 
   cache = {
-    categories: (cats.data ?? []) as MenuCategory[],
-    items: (items.data ?? []).map((row) => ({
-      ...(row as MenuItem),
-      description: (row as MenuItem).description ?? '',
-    })),
+    categories: remoteCategories,
+    items: remoteItems,
     ingredients: (ingredients.data ?? []) as Ingredient[],
     recipes: (recipes.data ?? []) as RecipeIngredient[],
     orders: assembled,
