@@ -1,4 +1,4 @@
-import { staffHeaders } from './supabase';
+import { staffHeaders, supabase } from './supabase';
 import type { MenuCategory, MenuItem, Order, OrderItem } from '../types';
 
 async function json(res: Response) {
@@ -14,8 +14,24 @@ export interface MenuData {
   items: MenuItem[];
 }
 
+/**
+ * Production path is same-origin /api/menu (Vercel). On plain `vite dev`
+ * there is no function host, so fall back to direct RLS-scoped reads —
+ * same rows, same policies, no mocks.
+ */
 export async function getMenu(): Promise<MenuData> {
-  return json(await fetch('/api/menu')) as Promise<MenuData>;
+  try {
+    const res = await fetch('/api/menu');
+    if (res.ok || res.status < 500) return (await json(res)) as MenuData;
+  } catch {
+    /* no function host (vite dev) — fall through to direct reads */
+  }
+  const [{ data: categories }, { data: items }] = await Promise.all([
+    supabase.from('menu_categories').select('*').eq('is_active', true).order('display_order'),
+    supabase.from('menu_items').select('*').eq('is_available', true).order('display_order'),
+  ]);
+  if (!categories || !items) throw new Error('menu_unavailable');
+  return { categories: categories as MenuCategory[], items: items as MenuItem[] };
 }
 
 export interface NewLine {
@@ -29,14 +45,28 @@ export async function placeOrder(input: {
   customer_name?: string;
   idempotency_key: string;
 }): Promise<Order> {
-  const data = (await json(
-    await fetch('/api/orders-create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    })
-  )) as { order: Order };
-  return data.order;
+  try {
+    const data = (await json(
+      await fetch('/api/orders-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+    )) as { order: Order };
+    return data.order;
+  } catch (e) {
+    if (e instanceof TypeError) {
+      // No function host (vite dev): same RPC, same server-side validation.
+      const { data, error } = await supabase.rpc('create_order', {
+        p_items: input.items,
+        p_customer_name: input.customer_name ?? null,
+        p_idempotency_key: input.idempotency_key,
+      });
+      if (error) throw new Error(error.message);
+      return data as Order;
+    }
+    throw e;
+  }
 }
 
 export interface OrderDetail {
@@ -45,7 +75,16 @@ export interface OrderDetail {
 }
 
 export async function getOrder(token: string): Promise<OrderDetail> {
-  return (await json(await fetch(`/api/orders-by-token?token=${encodeURIComponent(token)}`))) as OrderDetail;
+  try {
+    const res = await fetch(`/api/orders-by-token?token=${encodeURIComponent(token)}`);
+    if (res.ok || res.status < 500) return (await json(res)) as OrderDetail;
+  } catch {
+    /* no function host — fall through */
+  }
+  const { data, error } = await supabase.rpc('get_order_by_token', { p_token: token });
+  if (error) throw new Error('lookup_failed');
+  if (!data) throw new Error('order_not_found');
+  return data as OrderDetail;
 }
 
 export function freshKey(): string {
