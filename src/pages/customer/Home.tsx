@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BrandLogo } from '@/components/shared/BrandLogo'
+import { HeroSlideshow } from '@/components/customer/HeroSlideshow'
 import { CAFE } from '@/lib/cafe'
 
 const fadeUp = {
@@ -13,56 +13,76 @@ const fadeUp = {
 export function HomePage() {
   return (
     <main>
-      {/* Hero — brand first, one CTA group */}
-      <section className="relative min-h-[100svh] overflow-hidden grain">
-        <div
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_32%,rgba(240,193,75,0.2),transparent_50%),linear-gradient(125deg,#3a2a22_0%,#1a1210_45%,#0c0908_100%)]"
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 bg-[linear-gradient(to_top,rgba(14,10,9,0.95)_0%,rgba(14,10,9,0.45)_48%,rgba(14,10,9,0.15)_100%)]"
-          aria-hidden
-        />
-        <div className="relative mx-auto flex min-h-[100svh] max-w-5xl flex-col justify-end px-4 pb-16 pt-28 sm:px-6 sm:pb-20 lg:justify-center lg:pb-24">
+      {/* Hero — full-bleed sliding imagery, brand-led */}
+      <section
+        className="relative min-h-[100svh] overflow-hidden"
+        aria-label="Maña Katha hero"
+      >
+        <HeroSlideshow />
+
+        <div className="pointer-events-none relative z-[1] mx-auto flex min-h-[100svh] max-w-5xl flex-col justify-end px-4 pb-24 pt-28 sm:px-6 sm:pb-28 lg:justify-center lg:pb-24">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-start gap-5"
+            className="flex items-center gap-3"
           >
-            <BrandLogo size="hero" />
-            <p className="type-display text-leaf">Maña Katha</p>
+            <span className="h-px w-8 bg-leaf sm:w-10" aria-hidden />
+            <p className="eyebrow text-leaf/90">Hyderabad’s rooftop café</p>
           </motion.div>
+
           <motion.h1
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-5 max-w-xl font-display text-[clamp(1.5rem,2.4vw+0.85rem,2.35rem)] font-medium italic leading-snug tracking-tight text-foam text-balance"
+            transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-5 max-w-3xl font-display text-[clamp(3.1rem,8vw+0.6rem,6.5rem)] font-semibold leading-[0.94] tracking-[-0.02em] text-foam text-balance"
           >
-            Let’s begin our story.
+            Maña Katha
           </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-5 max-w-xl font-display text-[clamp(1.45rem,2.2vw+0.75rem,2.15rem)] font-medium leading-snug text-foam/95"
+          >
+            Let’s begin our <em className="text-leaf italic">story</em>.
+          </motion.p>
+
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.24, duration: 0.5 }}
-            className="lede mt-4"
+            transition={{ delay: 0.32, duration: 0.55 }}
+            className="mt-4 max-w-md text-[1.05rem] leading-relaxed text-foam/75"
           >
-            Hyderabad’s rooftop café — coffee, plates, and evenings above the city.
+            Coffee, plates, and evenings above the city in Vanasthalipuram.
           </motion.p>
+
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-10 flex flex-wrap gap-3"
+            transition={{ delay: 0.42, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-auto mt-10 flex flex-wrap gap-3"
           >
-            <Link to="/menu" className="btn btn-primary min-w-[9.5rem]">
-              View menu
+            <Link to="/menu" className="btn btn-primary min-w-[10rem] uppercase tracking-[0.08em]">
+              Explore menu
             </Link>
-            <Link to="/visit" className="btn btn-secondary">
+            <Link
+              to="/visit"
+              className="btn border border-foam/55 bg-transparent text-foam hover:border-leaf hover:text-leaf min-w-[9.5rem] uppercase tracking-[0.08em]"
+            >
               Find us
             </Link>
           </motion.div>
         </div>
+
+        <a
+          href="#our-story"
+          className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-[10px] font-medium uppercase tracking-[0.28em] text-foam/70 transition hover:text-leaf"
+        >
+          <span className="hero-scroll-line block h-10 w-px bg-gradient-to-b from-transparent via-leaf to-leaf" />
+          Scroll
+        </a>
       </section>
 
       {/* Story */}
