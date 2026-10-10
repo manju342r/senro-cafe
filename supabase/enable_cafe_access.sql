@@ -17,6 +17,20 @@ CREATE TABLE IF NOT EXISTS public.event_bookings (
 
 CREATE INDEX IF NOT EXISTS idx_event_bookings_created ON public.event_bookings(created_at DESC);
 
+-- Customer feedback from the website widget
+CREATE TABLE IF NOT EXISTS public.feedbacks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  message TEXT NOT NULL,
+  rating INT CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
+  phone TEXT,
+  email TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON public.feedbacks(created_at DESC);
+
 -- Customers (upserted on each order)
 CREATE TABLE IF NOT EXISTS public.customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,6 +56,7 @@ ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_status_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.event_bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
 
 -- Drop old policies if re-run
 DO $$
@@ -53,7 +68,7 @@ BEGIN
     WHERE schemaname = 'public'
       AND tablename IN (
         'menu_categories','menu_items','ingredients','recipe_ingredients',
-        'orders','order_items','order_status_events','customers','event_bookings'
+        'orders','order_items','order_status_events','customers','event_bookings','feedbacks'
       )
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
@@ -79,9 +94,11 @@ CREATE POLICY cafe_order_items_all ON public.order_items FOR ALL TO anon, authen
 CREATE POLICY cafe_order_events_all ON public.order_status_events FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY cafe_customers_all ON public.customers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY cafe_event_bookings_all ON public.event_bookings FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY cafe_feedbacks_all ON public.feedbacks FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.customers TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_bookings TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.feedbacks TO anon, authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- Live status updates for customer tracking (Realtime)

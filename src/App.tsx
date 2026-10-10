@@ -17,6 +17,7 @@ import { StaffAIPage } from '@/pages/staff/AI'
 import { StaffSalesPage } from '@/pages/staff/Sales'
 import { StaffCustomersPage } from '@/pages/staff/Customers'
 import { StaffEventBookingsPage } from '@/pages/staff/EventBookings'
+import { StaffFeedbackPage } from '@/pages/staff/Feedback'
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="sales" element={<StaffSalesPage />} />
             <Route path="customers" element={<StaffCustomersPage />} />
             <Route path="event-bookings" element={<StaffEventBookingsPage />} />
+            <Route path="feedback" element={<StaffFeedbackPage />} />
             <Route path="orders" element={<StaffOrdersPage />} />
             <Route path="menu" element={<StaffMenuPage />} />
             <Route path="analytics" element={<StaffAnalyticsPage />} />

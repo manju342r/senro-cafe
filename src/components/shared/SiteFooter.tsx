@@ -28,6 +28,15 @@ export function SiteFooter() {
             <Link to="/visit" className="block text-foam transition hover:text-leaf">
               Visit
             </Link>
+            <button
+              type="button"
+              className="block text-left text-foam transition hover:text-leaf"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('mana-katha-open-feedback'))
+              }}
+            >
+              Feedback
+            </button>
           </div>
           <div className="space-y-2.5">
             <p className="eyebrow">Find us</p>
