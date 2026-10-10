@@ -1,121 +1,103 @@
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
 import { useCart } from '../../contexts/CartContext';
-import { fetchMenu, type MenuResponse } from '../../lib/orders';
-import { formatCents } from '../../types/database';
-
-type State = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; data: MenuResponse };
+import { getMenu, type MenuData } from '../../lib/api';
+import { inr } from '../../types';
 
 export const MenuPage: React.FC = () => {
-  const { addItem, syncAvailability } = useCart();
-  const [state, setState] = React.useState<State>({ kind: 'loading' });
-  const [category, setCategory] = React.useState<string>('all');
-  const [addedId, setAddedId] = React.useState<string | null>(null);
+  const { add, refresh } = useCart();
+  const [data, setData] = React.useState<MenuData | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [cat, setCat] = React.useState('all');
+  const [flash, setFlash] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let live = true;
-    fetchMenu()
-      .then((data) => {
+    getMenu()
+      .then((d) => {
         if (!live) return;
-        syncAvailability(data.items);
-        setState({ kind: 'ready', data });
+        refresh(d.items);
+        setData(d);
       })
-      .catch(() => {
-        if (live) setState({ kind: 'error', message: 'Could not load the menu. Check your connection and retry.' });
-      });
+      .catch(() => live && setError('The menu could not be loaded. Check your connection and retry.'));
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAdd = (id: string, item: MenuResponse['items'][number]) => {
-    addItem(item);
-    setAddedId(id);
-    window.setTimeout(() => setAddedId((cur) => (cur === id ? null : cur)), 1200);
-  };
+  const shown = (data?.items ?? []).filter((i) => cat === 'all' || i.category_id === cat);
 
   return (
-    <CustomerLayout title="Menu">
-      {state.kind === 'loading' && (
-        <div className="space-y-3" aria-live="polite">
+    <CustomerLayout>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Good morning.</h1>
+      <p className="mt-1 text-sm text-cocoa">Made fresh, priced honestly. Pay at the counter.</p>
+
+      {!data && !error && (
+        <div className="mt-6 space-y-3" aria-live="polite">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface-elevated" />
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-parchment" />
           ))}
-          <p className="text-sm text-muted">Loading the menu…</p>
         </div>
       )}
 
-      {state.kind === 'error' && (
-        <div className="rounded-2xl border border-line bg-surface p-6 text-center" role="alert">
-          <p className="mb-4 text-sm text-muted">{state.message}</p>
+      {error && (
+        <div className="mt-6 rounded-2xl bg-card p-6 text-center shadow-sm" role="alert">
+          <p className="text-sm text-cocoa">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="rounded-full bg-content px-5 py-2.5 text-sm font-medium text-canvas"
+            className="mt-3 rounded-full bg-espresso px-5 py-2 text-sm font-semibold text-cream"
           >
             Retry
           </button>
         </div>
       )}
 
-      {state.kind === 'ready' && (
+      {data && (
         <>
-          {state.data.items.length === 0 ? (
-            <div className="rounded-2xl border border-line bg-surface p-6 text-center">
-              <p className="text-sm text-muted">The menu is empty right now. Please check back soon.</p>
-            </div>
+          {data.items.length === 0 ? (
+            <p className="mt-6 rounded-2xl bg-card p-6 text-center text-sm text-cocoa">
+              The menu is empty right now — check back soon.
+            </p>
           ) : (
             <>
-              <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Menu categories">
-                <button
-                  role="tab"
-                  aria-selected={category === 'all'}
-                  onClick={() => setCategory('all')}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
-                    category === 'all' ? 'bg-content text-canvas' : 'border border-line bg-surface'
-                  }`}
-                >
-                  All
-                </button>
-                {state.data.categories.map((c) => (
+              <div className="mt-5 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Categories">
+                {[{ id: 'all', name: 'Everything' }, ...data.categories].map((c) => (
                   <button
                     key={c.id}
                     role="tab"
-                    aria-selected={category === c.id}
-                    onClick={() => setCategory(c.id)}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
-                      category === c.id ? 'bg-content text-canvas' : 'border border-line bg-surface'
+                    aria-selected={cat === c.id}
+                    onClick={() => setCat(c.id)}
+                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
+                      cat === c.id ? 'bg-espresso text-cream' : 'bg-card text-cocoa shadow-sm'
                     }`}
                   >
                     {c.name}
                   </button>
                 ))}
               </div>
-
-              <ul className="space-y-3">
-                {state.data.items
-                  .filter((i) => category === 'all' || i.category_id === category)
-                  .map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4"
+              <ul className="mt-3 space-y-3">
+                {shown.map((item) => (
+                  <li key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-card p-4 shadow-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{item.name}</p>
+                      {item.description && <p className="mt-0.5 line-clamp-2 text-sm text-cocoa">{item.description}</p>}
+                      <p className="mt-1 font-display text-lg font-semibold text-ember">{inr(item.price_cents)}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        add(item);
+                        setFlash(item.id);
+                        window.setTimeout(() => setFlash((f) => (f === item.id ? null : f)), 1000);
+                      }}
+                      aria-label={`Add ${item.name} to basket`}
+                      className="flex shrink-0 items-center gap-1 rounded-full bg-espresso px-4 py-2.5 text-sm font-semibold text-cream active:scale-95"
                     >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{item.name}</p>
-                        {item.description && (
-                          <p className="mt-0.5 line-clamp-2 text-sm text-muted">{item.description}</p>
-                        )}
-                        <p className="mt-1 text-sm font-semibold">{formatCents(item.price_cents)}</p>
-                      </div>
-                      <button
-                        onClick={() => handleAdd(item.id, item)}
-                        className="shrink-0 rounded-full bg-content px-4 py-2 text-sm font-medium text-canvas active:scale-95"
-                        aria-label={`Add ${item.name} to cart`}
-                      >
-                        {addedId === item.id ? 'Added ✓' : 'Add'}
-                      </button>
-                    </li>
-                  ))}
+                      <Plus size={15} /> {flash === item.id ? 'Added' : 'Add'}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </>
           )}

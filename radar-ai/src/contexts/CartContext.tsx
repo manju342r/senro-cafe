@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { MenuItem } from '../types/database';
+import type { MenuItem } from '../types';
 
 export interface CartLine {
   menu_item_id: string;
@@ -7,29 +7,28 @@ export interface CartLine {
   unit_price_cents: number;
   quantity: number;
   note: string;
-  is_available: boolean;
+  available: boolean;
 }
 
-interface CartContextType {
+interface Cart {
   lines: CartLine[];
   count: number;
-  totalCents: number;
-  addItem: (item: MenuItem, qty?: number) => void;
-  setQty: (menu_item_id: string, qty: number) => void;
-  setNote: (menu_item_id: string, note: string) => void;
-  removeLine: (menu_item_id: string) => void;
+  total: number;
+  add: (item: MenuItem, qty?: number) => void;
+  setQty: (id: string, qty: number) => void;
+  setNote: (id: string, note: string) => void;
+  remove: (id: string) => void;
   clear: () => void;
-  syncAvailability: (liveItems: MenuItem[]) => void;
+  refresh: (live: MenuItem[]) => void;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
-const STORAGE_KEY = 'cafeos-cart-v1';
+const Ctx = createContext<Cart | undefined>(undefined);
+const KEY = 'senro-cart-v1';
 
 function load(): CartLine[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    const raw = localStorage.getItem(KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -41,21 +40,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+      localStorage.setItem(KEY, JSON.stringify(lines));
     } catch {
-      /* storage full/blocked: cart still works in memory */
+      /* private mode etc: cart still works for the session */
     }
   }, [lines]);
 
-  const value = useMemo<CartContextType>(() => {
-    const addItem: CartContextType['addItem'] = (item, qty = 1) => {
+  const value = useMemo<Cart>(() => {
+    const add: Cart['add'] = (item, qty = 1) =>
       setLines((prev) => {
-        const found = prev.find((l) => l.menu_item_id === item.id);
-        if (found) {
+        const hit = prev.find((l) => l.menu_item_id === item.id);
+        if (hit) {
           return prev.map((l) =>
-            l.menu_item_id === item.id
-              ? { ...l, quantity: Math.min(20, l.quantity + qty) }
-              : l
+            l.menu_item_id === item.id ? { ...l, quantity: Math.min(20, l.quantity + qty) } : l
           );
         }
         return [
@@ -66,56 +63,48 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unit_price_cents: item.price_cents,
             quantity: Math.min(20, qty),
             note: '',
-            is_available: item.is_available,
+            available: item.is_available,
           },
         ];
       });
-    };
-    const setQty: CartContextType['setQty'] = (menu_item_id, qty) => {
+    const setQty: Cart['setQty'] = (id, qty) =>
       setLines((prev) =>
         qty <= 0
-          ? prev.filter((l) => l.menu_item_id !== menu_item_id)
-          : prev.map((l) =>
-              l.menu_item_id === menu_item_id
-                ? { ...l, quantity: Math.min(20, qty) }
-                : l
-            )
+          ? prev.filter((l) => l.menu_item_id !== id)
+          : prev.map((l) => (l.menu_item_id === id ? { ...l, quantity: Math.min(20, qty) } : l))
       );
-    };
-    const setNote: CartContextType['setNote'] = (menu_item_id, note) => {
-      setLines((prev) =>
-        prev.map((l) => (l.menu_item_id === menu_item_id ? { ...l, note } : l))
-      );
-    };
-    const removeLine: CartContextType['removeLine'] = (menu_item_id) => {
-      setLines((prev) => prev.filter((l) => l.menu_item_id !== menu_item_id));
-    };
+    const setNote: Cart['setNote'] = (id, note) =>
+      setLines((prev) => prev.map((l) => (l.menu_item_id === id ? { ...l, note } : l)));
+    const remove: Cart['remove'] = (id) => setLines((prev) => prev.filter((l) => l.menu_item_id !== id));
     const clear = () => setLines([]);
-    const syncAvailability: CartContextType['syncAvailability'] = (liveItems) => {
-      const live = new Map(liveItems.map((i) => [i.id, i]));
+    const refresh: Cart['refresh'] = (live) => {
+      const map = new Map(live.map((i) => [i.id, i]));
       setLines((prev) =>
         prev.map((l) => {
-          const hit = live.get(l.menu_item_id);
-          if (!hit) return { ...l, is_available: false };
-          return {
-            ...l,
-            name: hit.name,
-            unit_price_cents: hit.price_cents,
-            is_available: hit.is_available,
-          };
+          const item = map.get(l.menu_item_id);
+          if (!item) return { ...l, available: false };
+          return { ...l, name: item.name, unit_price_cents: item.price_cents, available: item.is_available };
         })
       );
     };
-    const count = lines.reduce((n, l) => n + l.quantity, 0);
-    const totalCents = lines.reduce((n, l) => n + l.quantity * l.unit_price_cents, 0);
-    return { lines, count, totalCents, addItem, setQty, setNote, removeLine, clear, syncAvailability };
+    return {
+      lines,
+      count: lines.reduce((n, l) => n + l.quantity, 0),
+      total: lines.reduce((n, l) => n + l.quantity * l.unit_price_cents, 0),
+      add,
+      setQty,
+      setNote,
+      remove,
+      clear,
+      refresh,
+    };
   }, [lines]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
-export function useCart(): CartContextType {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within CartProvider');
+export function useCart(): Cart {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useCart must be used inside CartProvider');
   return ctx;
 }

@@ -1,61 +1,42 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { getSessionProfile, isStaffRole } from '../lib/supabase';
+import { sessionProfile } from '../lib/supabase';
 
-type State =
-  | { kind: 'checking' }
-  | { kind: 'denied'; message: string }
-  | { kind: 'allowed' };
-
-/** Blocks non-staff users. Customers never reach staff screens or cost data. */
+/** Only staff/admin pass. Everyone else gets login or a plain denial. */
 export const StaffRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = React.useState<State>({ kind: 'checking' });
+  const [state, setState] = React.useState<'checking' | 'deny-login' | { deny: string } | 'ok'>('checking');
 
   React.useEffect(() => {
     let live = true;
-    getSessionProfile()
-      .then(({ user, profile }) => {
+    sessionProfile()
+      .then(({ userId, role }) => {
         if (!live) return;
-        if (!user) {
-          setState({ kind: 'denied', message: 'signed-out' });
-        } else if (!profile) {
+        if (!userId) setState('deny-login');
+        else if (role === 'staff' || role === 'admin') setState('ok');
+        else
           setState({
-            kind: 'denied',
-            message: 'No staff profile found (migration 001 may not be applied yet).',
+            deny: role
+              ? `Account role '${role}' cannot open staff screens.`
+              : 'No staff profile yet — the database setup may be incomplete.',
           });
-        } else if (!isStaffRole(profile.role)) {
-          setState({ kind: 'denied', message: `Role '${profile.role}' cannot access staff screens.` });
-        } else {
-          setState({ kind: 'allowed' });
-        }
       })
-      .catch(() =>
-        setState({ kind: 'denied', message: 'Could not verify staff access. Check your connection.' })
-      );
+      .catch(() => live && setState({ deny: 'Could not verify access. Check your connection.' }));
     return () => {
       live = false;
     };
   }, []);
 
-  if (state.kind === 'checking') {
+  if (state === 'checking')
+    return <p className="p-8 text-center text-cocoa" aria-live="polite">Checking staff access…</p>;
+  if (state === 'deny-login') return <Navigate to="/staff/login" replace />;
+  if (state !== 'ok')
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-canvas text-sm text-muted" aria-live="polite">
-        Verifying staff access…
+      <div className="mx-auto mt-16 max-w-sm rounded-2xl bg-card p-6 text-center shadow-sm" role="alert">
+        <p className="text-sm">{state.deny}</p>
+        <a href="/staff/login" className="mt-3 inline-block text-sm font-medium text-ember underline">
+          Staff login
+        </a>
       </div>
     );
-  }
-  if (state.kind === 'denied') {
-    if (state.message === 'signed-out') return <Navigate to="/staff/login" replace />;
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
-        <div className="max-w-sm rounded-2xl border border-line bg-surface p-6 text-center" role="alert">
-          <p className="text-sm">{state.message}</p>
-          <a href="/staff/login" className="mt-4 inline-block text-sm underline">
-            Go to staff login
-          </a>
-        </div>
-      </div>
-    );
-  }
   return <>{children}</>;
 };
