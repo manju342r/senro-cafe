@@ -50,7 +50,6 @@ export function MenuPage() {
       name: item.name,
       price_cents: item.price_cents,
     })
-    setCartOpen(true)
   }
 
   async function placeOrder() {
@@ -165,14 +164,6 @@ export function MenuPage() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        {count > 0 ? (
-          <div className="mb-8 flex justify-end">
-            <button type="button" className="btn btn-primary" onClick={() => setCartOpen(true)}>
-              Cart · {count}
-            </button>
-          </div>
-        ) : null}
-
         {query.trim() ? (
           <p className="mb-6 text-sm text-steam">
             {filtered.length} result{filtered.length === 1 ? '' : 's'}
