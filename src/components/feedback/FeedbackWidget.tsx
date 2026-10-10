@@ -19,9 +19,27 @@ export function FeedbackWidget() {
       setDone(false)
       setError(null)
     }
+    const togglePanel = () => {
+      setOpen((v) => !v)
+      setDone(false)
+      setError(null)
+    }
     window.addEventListener('mana-katha-open-feedback', openPanel)
-    return () => window.removeEventListener('mana-katha-open-feedback', openPanel)
+    window.addEventListener('mana-katha-toggle-feedback', togglePanel)
+    return () => {
+      window.removeEventListener('mana-katha-open-feedback', openPanel)
+      window.removeEventListener('mana-katha-toggle-feedback', togglePanel)
+    }
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,11 +61,19 @@ export function FeedbackWidget() {
     }
   }
 
+  if (!open) return null
+
   return (
-    <div className="pointer-events-none fixed bottom-4 left-4 z-40 flex flex-col items-start gap-3 sm:bottom-6 sm:left-6">
-      {open ? (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        className="absolute inset-0 bg-ink/55 backdrop-blur-[2px]"
+        aria-label="Dismiss feedback"
+        onClick={() => setOpen(false)}
+      />
+      <div className="pointer-events-none absolute right-3 top-[4.25rem] flex w-[min(22rem,calc(100vw-1.5rem))] flex-col sm:right-6 sm:top-[4.75rem]">
         <section
-          className="pointer-events-auto w-[min(22rem,calc(100vw-2rem))] border border-line bg-ink/95 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+          className="pointer-events-auto border border-line bg-ink/95 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
           role="dialog"
           aria-label="Send feedback"
         >
@@ -151,20 +177,7 @@ export function FeedbackWidget() {
             </button>
           </form>
         </section>
-      ) : null}
-
-      <button
-        type="button"
-        className="pointer-events-auto btn btn-secondary min-h-12 rounded-md px-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
-        onClick={() => {
-          setOpen((v) => !v)
-          setDone(false)
-          setError(null)
-        }}
-        aria-expanded={open}
-      >
-        {open ? 'Hide feedback' : 'Feedback'}
-      </button>
+      </div>
     </div>
   )
 }
