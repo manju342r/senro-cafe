@@ -1,0 +1,12 @@
+{
+  "regions": [
+    { "id": "sidebar", "kind": "chrome", "grid": "A0:B9", "note": "Emerald green left sidebar" },
+    { "id": "header", "kind": "chrome", "grid": "C0:I0", "note": "Top navigation bar" },
+    { "id": "hero-text", "kind": "text", "grid": "C1:F1", "note": "Main page title 'Performance Overview'" },
+    { "id": "metric-cards", "kind": "control", "grid": "C2:J3", "note": "Four white metric cards with values" },
+    { "id": "revenue-chart", "kind": "control", "grid": "C4:G6", "note": "Line chart for Revenue Growth" },
+    { "id": "acquisition-chart", "kind": "control", "grid": "H4:J6", "note": "Bar chart for Customer Acquisition" },
+    { "id": "kpi-table", "kind": "control", "grid": "C7:J9", "note": "Table of Key Performance Indicators" },
+    { "id": "profile-avatar", "kind": "chrome", "grid": "J0:J0", "note": "User profile avatar image" }
+  ]
+}

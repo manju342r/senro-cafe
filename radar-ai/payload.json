@@ -1,0 +1,79 @@
+{
+  "title": "Choose the visual world for Senro.AI Dashboard",
+  "question": "The roll assigned Archival Intelligence Index. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Archival Intelligence Index",
+      "kicker": "THE ROLL",
+      "lineage": "museum archival metadata systems",
+      "thesis": "Competitor changes are framed as archived historical artifacts on a precise timeline.",
+      "palette": ["#fcfaf8", "#e6e3df", "#1f2937", "#d97757"],
+      "materials": ["matte paper", "archival ink"],
+      "viewport": "Navigation on the left; the main area is a vertical timeline of changes framed like museum artifact cards.",
+      "risk": "Might feel too academic or quiet for a fast-moving operational team.",
+      "raised": [
+        {
+          "from": "challenger-pro",
+          "raise": "Adopts the dense grid-alignment of pro tools for data readability."
+        }
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.webp",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-warm-consumer-app-surface-hero.webp"
+    },
+    {
+      "id": "model-pick",
+      "label": "Financial Terminal",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "financial trading terminals",
+      "thesis": "Treats competitor updates as urgent market signals.",
+      "palette": ["#0a0a0a", "#1a1a1a", "#e5e5e5", "#3b82f6"],
+      "materials": ["glass", "phosphor glow"],
+      "viewport": "Dense tabular views with strict hierarchy, distinct red/green signal indicators.",
+      "risk": "Familiar to the point of blending in with standard fintech dashboards.",
+      "comp": ".impeccable/mocks/decision/model-pick.webp"
+    },
+    {
+      "id": "challenger-pro",
+      "label": "Data-dense Pro Tool",
+      "verdict": "competitive",
+      "lineage": "pro SaaS dashboards",
+      "thesis": "A dense, high-contrast dashboard built for rapid scanning.",
+      "palette": ["#111827", "#1f2937", "#f3f4f6", "#10b981"],
+      "materials": ["dark matte plastic", "LED indicators"],
+      "viewport": "Top command bar, dense cards for each competitor event.",
+      "case": "Serves the dashboard use case perfectly; loses narrowly on conceptual distinctness.",
+      "risk": "Risks looking like typical AI SaaS slop if the gradients slip in.",
+      "comp": ".impeccable/mocks/decision/challenger-pro.webp"
+    },
+    {
+      "id": "challenger-industrial",
+      "label": "Industrial Cockpit",
+      "verdict": "declined",
+      "lineage": "industrial control panels",
+      "palette": ["#e4e4e7", "#71717a", "#18181b", "#ef4444"],
+      "materials": ["brushed steel", "matte display"],
+      "case": "Fuses poorly: too mechanical for a strategic intelligence tool.",
+      "kept": "Strict use of mono typography for timestamps and raw data points.",
+      "comp": ".impeccable/mocks/decision/challenger-industrial.webp"
+    }
+  ],
+  "reroll": {
+    "registers": ["safer", "bolder"]
+  },
+  "buildPath": {
+    "value": "comp",
+    "toggle": true
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "The expected B2B SaaS dashboard.",
+    "palette": ["#ffffff", "#f8fafc", "#0f172a", "#3b82f6"],
+    "materials": ["clean grid", "soft shadows"],
+    "viewport": "Left sidebar, white cards on a light grey background.",
+    "risk": "Indistinguishable from the competition by design.",
+    "comp": ".impeccable/mocks/decision/canon.webp"
+  },
+  "steer": true
+}
