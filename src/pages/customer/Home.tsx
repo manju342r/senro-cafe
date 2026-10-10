@@ -85,41 +85,95 @@ export function HomePage() {
         </a>
       </section>
 
-      {/* Story */}
-      <section id="our-story" className="border-t border-line">
-        <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 sm:py-24">
-          <motion.p {...fadeUp} className="eyebrow">
-            Our story
-          </motion.p>
-          <motion.h2 {...fadeUp} className="type-page mt-3 text-leaf">
-            Idi… MaNa Katha
-          </motion.h2>
+      {/* Story — AnTeRa-style two-column composition */}
+      <section id="our-story" className="border-t border-line bg-forest/20">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-2 lg:gap-16">
           <motion.div
             {...fadeUp}
-            className="mt-8 space-y-5 text-[1.075rem] leading-relaxed text-steam"
+            className="relative mx-auto w-full max-w-md lg:max-w-none"
           >
-            <p className="text-foam">
-              Maña Katha means <em className="font-display text-[1.15em] not-italic text-leaf">our story</em>{' '}
-              — a rooftop café in Vanasthalipuram where filter coffee, comfort plates, and long
-              conversations share the same table.
-            </p>
-            <p>
-              Known as one of the largest rooftop cafés in Hyderabad, MKC is built for group nights,
-              slow evenings, and the first sip that starts everything.
-            </p>
-            <p>
-              Follow along at{' '}
-              <a
-                href={CAFE.instagram}
-                target="_blank"
-                rel="noreferrer"
-                className="text-leaf transition hover:underline"
-              >
-                {CAFE.handle}
-              </a>{' '}
-              — then come up to the roof.
-            </p>
+            <div className="relative aspect-[4/5] overflow-hidden sm:aspect-square">
+              <img
+                src="/cafe/hero/01-dining.jpg"
+                alt="Plated dishes at Maña Katha"
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent" />
+            </div>
+            <div className="absolute -bottom-6 right-0 w-[48%] overflow-hidden border border-line shadow-[0_20px_50px_rgba(0,0,0,0.45)] sm:-bottom-8 sm:right-4 sm:w-[42%]">
+              <img
+                src="/cafe/hero/10-brunch.jpg"
+                alt="Signature plates"
+                className="aspect-square w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div className="absolute bottom-4 left-0 bg-leaf px-4 py-3 text-ink sm:bottom-8 sm:left-4">
+              <p className="font-display text-lg font-semibold leading-none tracking-wide sm:text-xl">
+                Rooftop
+              </p>
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em]">
+                Vanasthalipuram
+              </p>
+            </div>
           </motion.div>
+
+          <div className="lg:pt-4">
+            <motion.p {...fadeUp} className="eyebrow text-leaf">
+              Our story
+            </motion.p>
+            <motion.h2
+              {...fadeUp}
+              className="mt-4 font-display text-[clamp(2.1rem,3.5vw+0.8rem,3.4rem)] font-semibold leading-[1.08] tracking-tight text-foam"
+            >
+              Crafted with <em className="text-leaf italic">passion</em>,
+              <br />
+              served with pride
+            </motion.h2>
+            <motion.div
+              {...fadeUp}
+              className="mt-7 space-y-4 text-[1.05rem] leading-relaxed text-steam"
+            >
+              <p className="text-foam/90">
+                Maña Katha means <em className="font-display text-[1.12em] text-leaf italic">our story</em>{' '}
+                — a rooftop café in Vanasthalipuram where filter coffee, comfort plates, and long
+                conversations share the same table.
+              </p>
+              <p>
+                Known as one of the largest rooftop cafés in Hyderabad, MKC is built for group nights,
+                slow evenings, and the first sip that starts everything.
+              </p>
+            </motion.div>
+
+            <motion.div
+              {...fadeUp}
+              className="mt-10 grid grid-cols-3 gap-4 border-t border-line pt-8 sm:gap-6"
+            >
+              {[
+                { value: '5th–6th', label: 'Floor rooftop' },
+                { value: 'Hyd', label: 'Vanasthalipuram' },
+                { value: '100%', label: 'Fresh to order' },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <p className="font-display text-2xl font-semibold text-leaf sm:text-3xl">
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-steam sm:text-[11px]">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </motion.div>
+
+            <motion.div {...fadeUp} className="mt-8">
+              <Link to="/menu" className="btn btn-primary min-w-[10rem] uppercase tracking-[0.08em]">
+                Explore menu
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </section>
 
