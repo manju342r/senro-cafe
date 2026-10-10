@@ -364,4 +364,22 @@
   .nav-link:hover::after {
     transform: scaleX(1);
   }
+
+  .hero-scroll-line {
+    animation: hero-scroll-pulse 1.8s var(--ease-out) infinite;
+  }
+
+  @keyframes hero-scroll-pulse {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scaleY(0.85);
+      transform-origin: top;
+    }
+    50% {
+      opacity: 1;
+      transform: scaleY(1);
+      transform-origin: top;
+    }
+  }
 }
