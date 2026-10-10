@@ -4,6 +4,7 @@ import { useCart } from '@/contexts/CartContext'
 import { SiteFooter } from '@/components/shared/SiteFooter'
 import { BrandLogo } from '@/components/shared/BrandLogo'
 import { ChatWidget } from '@/components/chat/ChatWidget'
+import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 
 function linkClass(isActive: boolean) {
   return `nav-link ${isActive ? 'is-active text-leaf' : 'text-steam hover:text-foam'}`
@@ -55,6 +56,7 @@ export function CustomerShell() {
         <Outlet />
       </div>
       <SiteFooter />
+      <FeedbackWidget />
       <ChatWidget />
     </div>
   )

@@ -14,6 +14,7 @@ const adminLinks = [
   { to: '/staff/sales', label: 'Sales' },
   { to: '/staff/customers', label: 'Customers' },
   { to: '/staff/event-bookings', label: 'Event bookings' },
+  { to: '/staff/feedback', label: 'Feedback' },
 ]
 
 export function StaffShell() {
