@@ -49,6 +49,15 @@ export function CustomerShell() {
                 </motion.span>
               )}
             </NavLink>
+            <button
+              type="button"
+              className="btn btn-primary min-h-9 px-3.5 py-1.5 text-sm"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('mana-katha-toggle-feedback'))
+              }}
+            >
+              Feedback
+            </button>
           </nav>
         </div>
       </header>
