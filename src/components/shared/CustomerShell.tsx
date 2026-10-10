@@ -89,7 +89,7 @@ export function CustomerShell() {
           </nav>
         </div>
       </header>
-      <div className="flex-1">
+      <div className="flex-1 overflow-x-hidden">
         <Outlet />
       </div>
       <SiteFooter />

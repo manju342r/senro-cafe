@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useCart } from '@/contexts/CartContext'
 import { createOrder, getMenu } from '@/lib/demoStore'
 import { useDemoState } from '@/hooks/useDemo'
@@ -17,24 +18,21 @@ export function MenuPage() {
   const [submitting, setSubmitting] = useState(false)
   const deferredQuery = useDeferredValue(query.trim().toLowerCase())
   const navigate = useNavigate()
+  const reduceMotion = useReducedMotion()
 
   useEffect(() => {
     if (count === 0) setCartOpen(false)
   }, [count])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+  }, [reduceMotion])
 
   const qtyById = useMemo(() => {
     const map = new Map<string, number>()
     for (const line of lines) map.set(line.menu_item_id, line.quantity)
     return map
   }, [lines])
-
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const item of items) {
-      counts.set(item.category_id, (counts.get(item.category_id) ?? 0) + 1)
-    }
-    return counts
-  }, [items])
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
@@ -84,182 +82,200 @@ export function MenuPage() {
   }
 
   return (
-    <main className={`page-shell ${count > 0 ? 'pb-36' : ''}`}>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="type-page text-leaf">Menu</h1>
-          <p className="mt-3 text-steam">
+    <motion.main
+      className={`relative ${count > 0 ? 'pb-36' : ''}`}
+      initial={reduceMotion ? false : { opacity: 0, x: '12%' }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="border-b border-line/60 bg-ink/40">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
+          <p className="eyebrow text-leaf">Our menu</p>
+          <h1 className="mt-3 font-display text-[clamp(2.4rem,4vw+1rem,3.75rem)] font-semibold leading-[1.05] tracking-tight text-foam">
+            A culinary <em className="text-leaf italic">journey</em>
+          </h1>
+          <p className="mt-4 max-w-xl text-steam">
             {live.ready
-              ? `Add dishes here — your cart stays on this page.`
+              ? 'Seasonal comfort · Cooked fresh to order · Pay at the counter'
               : 'Loading live menu…'}
           </p>
+
+          <div className="mt-8 max-w-md">
+            <label htmlFor="menu-search" className="sr-only">
+              Search menu
+            </label>
+            <div className="relative">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-steam"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+              </svg>
+              <input
+                id="menu-search"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search dishes, drinks, desserts…"
+                autoComplete="off"
+                className="field pl-10"
+              />
+            </div>
+          </div>
         </div>
-        {count > 0 ? (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setCartOpen(true)}
-          >
-            Cart · {count}
-          </button>
-        ) : null}
       </div>
 
-      <div className="mb-6">
-        <label htmlFor="menu-search" className="sr-only">
-          Search menu
-        </label>
-        <div className="relative">
-          <svg
-            aria-hidden
-            viewBox="0 0 24 24"
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-steam"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
-          </svg>
-          <input
-            id="menu-search"
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search dishes, drinks, desserts…"
-            autoComplete="off"
-            className="field pl-10"
-          />
+      <div className="sticky top-[3.5rem] z-10 border-b border-line bg-ink/92 backdrop-blur-xl">
+        <div className="-mx-0 overflow-x-auto">
+          <div className="mx-auto flex min-w-max max-w-5xl gap-1 px-4 sm:gap-2 sm:px-6">
+            <button
+              type="button"
+              onClick={() => setCategoryId('all')}
+              className={`relative whitespace-nowrap px-3 py-3.5 text-[11px] font-medium uppercase tracking-[0.16em] transition sm:px-4 sm:text-xs ${
+                categoryId === 'all' ? 'text-leaf' : 'text-steam hover:text-foam'
+              }`}
+            >
+              All
+              {categoryId === 'all' ? (
+                <span className="absolute inset-x-3 bottom-0 h-px bg-leaf sm:inset-x-4" />
+              ) : null}
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategoryId(cat.id)}
+                className={`relative whitespace-nowrap px-3 py-3.5 text-[11px] font-medium uppercase tracking-[0.16em] transition sm:px-4 sm:text-xs ${
+                  categoryId === cat.id ? 'text-leaf' : 'text-steam hover:text-foam'
+                }`}
+              >
+                {cat.name}
+                {categoryId === cat.id ? (
+                  <span className="absolute inset-x-3 bottom-0 h-px bg-leaf sm:inset-x-4" />
+                ) : null}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+        {count > 0 ? (
+          <div className="mb-8 flex justify-end">
+            <button type="button" className="btn btn-primary" onClick={() => setCartOpen(true)}>
+              Cart · {count}
+            </button>
+          </div>
+        ) : null}
+
         {query.trim() ? (
-          <p className="mt-2 text-sm text-steam">
+          <p className="mb-6 text-sm text-steam">
             {filtered.length} result{filtered.length === 1 ? '' : 's'}
             {categoryId !== 'all' ? ' in this category' : ''}
           </p>
         ) : null}
-      </div>
 
-      <div className="-mx-4 mb-8 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <div className="flex min-w-max gap-2 sm:min-w-0 sm:flex-wrap">
-          <button
-            type="button"
-            onClick={() => setCategoryId('all')}
-            className={`chip ${categoryId === 'all' ? 'chip-active' : 'chip-idle'}`}
-          >
-            All ({items.length})
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setCategoryId(cat.id)}
-              className={`chip ${categoryId === cat.id ? 'chip-active' : 'chip-idle'}`}
-            >
-              {cat.name} ({categoryCounts.get(cat.id) ?? 0})
-            </button>
-          ))}
-        </div>
-      </div>
+        {filtered.length === 0 ? (
+          <p className="border border-line bg-forest/40 px-6 py-10 text-steam">
+            {query.trim()
+              ? `No matches for “${query.trim()}”. Try another name or clear search.`
+              : 'No items in this category right now.'}
+          </p>
+        ) : (
+          <ul className="grid gap-x-10 gap-y-0 sm:grid-cols-2">
+            {filtered.map((item) => {
+              const qty = qtyById.get(item.id) ?? 0
+              const inCart = qty > 0
+              const mins = Math.max(1, Math.round(item.prep_time_seconds / 60))
 
-      {filtered.length === 0 ? (
-        <p className="border border-line bg-forest/40 px-6 py-10 text-steam">
-          {query.trim()
-            ? `No matches for “${query.trim()}”. Try another name or clear search.`
-            : 'No items in this category right now.'}
-        </p>
-      ) : (
-        <ul className="divide-y divide-line border-y border-line">
-          {filtered.map((item) => {
-            const qty = qtyById.get(item.id) ?? 0
-            const inCart = qty > 0
+              return (
+                <li
+                  key={item.id}
+                  className="menu-row border-b border-line/80 py-6 first:border-t sm:[&:nth-child(-n+2)]:border-t"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <h2 className="min-w-0 font-display text-[1.35rem] font-semibold leading-tight tracking-tight text-foam sm:text-[1.5rem]">
+                      {item.name}
+                    </h2>
+                    <p className="shrink-0 font-display text-lg font-semibold tabular-nums text-leaf sm:text-xl">
+                      {formatCents(item.price_cents)}
+                    </p>
+                  </div>
 
-            return (
-              <li key={item.id} className="menu-row flex items-start justify-between gap-4 py-5">
-                <div className="min-w-0 flex-1">
-                  <h2 className="font-display text-[1.35rem] font-semibold leading-tight tracking-tight text-foam sm:text-[1.5rem]">
-                    {item.name}
-                  </h2>
                   {item.description ? (
-                    <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-steam">
-                      {item.description}
-                    </p>
-                  ) : null}
-                  {inCart ? (
-                    <p className="mt-1.5 text-sm text-steam">
-                      {formatCents(item.price_cents)} each
-                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-steam">{item.description}</p>
                   ) : (
-                    <p className="mt-2.5 text-xs font-medium uppercase tracking-[0.16em] text-steam/75">
+                    <p className="mt-2 text-sm leading-relaxed text-steam/80">
                       {item.is_available
-                        ? `~${Math.max(1, Math.round(item.prep_time_seconds / 60))} min`
-                        : 'Sold out'}
+                        ? `Fresh to order · ~${mins} min prep`
+                        : 'Currently unavailable'}
                     </p>
                   )}
-                </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-3">
-                  <p className="font-semibold tracking-wide text-leaf">
-                    {formatCents(inCart ? item.price_cents * qty : item.price_cents)}
-                  </p>
                   {!item.is_available && !inCart ? (
-                    <button
-                      type="button"
-                      disabled
-                      className="btn btn-primary min-w-[5.5rem] disabled:bg-steam/25 disabled:text-steam"
-                    >
+                    <span className="mt-3 inline-block border border-steam/40 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-steam">
                       Sold out
-                    </button>
-                  ) : inCart ? (
-                    <div className="flex items-center gap-2">
+                    </span>
+                  ) : null}
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {!item.is_available && !inCart ? null : inCart ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-secondary min-h-10 min-w-10 px-0"
+                          onClick={() => setQuantity(item.id, qty - 1)}
+                          aria-label={`Decrease ${item.name}`}
+                        >
+                          −
+                        </button>
+                        <span className="w-7 text-center font-medium tabular-nums text-foam">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary min-h-10 min-w-10 px-0"
+                          onClick={() =>
+                            addItem({
+                              menu_item_id: item.id,
+                              name: item.name,
+                              price_cents: item.price_cents,
+                            })
+                          }
+                          disabled={!item.is_available}
+                          aria-label={`Increase ${item.name}`}
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost px-2 text-sm"
+                          onClick={() => removeItem(item.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        className="btn btn-secondary min-h-11 min-w-11 px-0"
-                        onClick={() => setQuantity(item.id, qty - 1)}
-                        aria-label={`Decrease ${item.name}`}
+                        onClick={() => handleAdd(item)}
+                        className="btn btn-secondary min-h-9 px-4 text-sm uppercase tracking-[0.08em]"
                       >
-                        −
+                        Add
                       </button>
-                      <span className="w-7 text-center font-medium tabular-nums text-foam">
-                        {qty}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-secondary min-h-11 min-w-11 px-0"
-                        onClick={() =>
-                          addItem({
-                            menu_item_id: item.id,
-                            name: item.name,
-                            price_cents: item.price_cents,
-                          })
-                        }
-                        disabled={!item.is_available}
-                        aria-label={`Increase ${item.name}`}
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost px-2 text-sm"
-                        onClick={() => removeItem(item.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleAdd(item)}
-                      className="btn btn-primary min-w-[5.5rem]"
-                    >
-                      Add
-                    </button>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
 
       {count > 0 ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pe-20 ps-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6">
@@ -287,9 +303,7 @@ export function MenuPage() {
                     <li key={line.menu_item_id} className="flex items-center justify-between gap-3 py-3">
                       <div className="min-w-0">
                         <p className="truncate font-medium text-foam">{line.name}</p>
-                        <p className="text-sm text-steam">
-                          {formatCents(line.price_cents)} each
-                        </p>
+                        <p className="text-sm text-steam">{formatCents(line.price_cents)} each</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <button
@@ -300,9 +314,7 @@ export function MenuPage() {
                         >
                           −
                         </button>
-                        <span className="w-6 text-center tabular-nums text-foam">
-                          {line.quantity}
-                        </span>
+                        <span className="w-6 text-center tabular-nums text-foam">{line.quantity}</span>
                         <button
                           type="button"
                           className="btn btn-secondary min-h-10 min-w-10 px-0"
@@ -391,6 +403,6 @@ export function MenuPage() {
           </div>
         </div>
       ) : null}
-    </main>
+    </motion.main>
   )
 }
