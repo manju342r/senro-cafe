@@ -695,21 +695,31 @@ export async function createOrder(input: {
     idempotency_key: input.idempotency_key ?? null,
   }
 
+  // Older Supabase projects may lack phone / token columns — strip and retry.
+  let insertPayload: Record<string, unknown> = { ...orderPayload }
   let { data: order, error: orderError } = await sb
     .from('orders')
-    .insert(orderPayload)
+    .insert(insertPayload)
     .select('*')
     .single()
 
-  // Column may not exist until add_daily_token_number.sql is run — still show daily tokens.
-  if (orderError?.message?.includes('token_number')) {
-    const { token_number: _drop, ...withoutToken } = orderPayload
+  for (const col of ['token_number', 'customer_phone'] as const) {
+    if (!orderError?.message?.includes(col)) continue
+    const { [col]: _drop, ...rest } = insertPayload
+    insertPayload = rest
     ;({ data: order, error: orderError } = await sb
       .from('orders')
-      .insert(withoutToken)
+      .insert(insertPayload)
       .select('*')
       .single())
-    if (order) order = { ...order, token_number }
+  }
+
+  if (order) {
+    order = {
+      ...order,
+      customer_phone: (order as Order).customer_phone ?? customerPhone,
+      token_number: (order as Order).token_number ?? token_number,
+    }
   }
 
   if (orderError || !order) {
@@ -717,9 +727,7 @@ export async function createOrder(input: {
     throw new Error(
       orderError?.message?.includes('row-level security')
         ? 'Supabase blocked the order write. Run supabase/enable_cafe_access.sql in the SQL Editor once.'
-        : msg.includes('customer_phone')
-          ? 'Phone column missing. Run supabase/enable_cafe_access.sql in the SQL Editor once.'
-          : msg,
+        : msg,
     )
   }
 
