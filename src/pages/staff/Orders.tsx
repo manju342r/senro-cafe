@@ -156,7 +156,7 @@ export function StaffOrdersPage() {
           className={`btn text-sm ${soundOn ? 'btn-secondary' : 'btn-primary'}`}
           onClick={() => void enableSound()}
         >
-          {soundOn ? 'Sound on — test ring' : 'Enable order sound'}
+          {soundOn ? 'Alarm on — test blast' : 'Enable order alarm'}
         </button>
       </div>
       {error && (
