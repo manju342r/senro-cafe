@@ -46,9 +46,11 @@ CREATE TABLE recipe_ingredients (
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_name TEXT,
+  customer_phone TEXT,
   status order_status DEFAULT 'received',
   total_cents INT NOT NULL,
   tracking_token TEXT NOT NULL UNIQUE,
+  token_number INT,
   idempotency_key TEXT UNIQUE,
   estimated_ready_at TIMESTAMPTZ,
   accepted_at TIMESTAMPTZ,

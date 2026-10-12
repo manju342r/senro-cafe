@@ -12,6 +12,7 @@ import {
   type Ingredient,
   type MenuCategory,
   type MenuItem,
+  type Order,
   type OrderStatus,
   type OrderStatusEvent,
   type OrderItem,
@@ -209,15 +210,109 @@ function assembleOrders(
     list.push(row)
     eventsByOrder.set(row.order_id, list)
   }
-  return orderRows
+  const assembled = orderRows
     .map((o) => ({
       ...o,
+      customer_phone: o.customer_phone ?? null,
+      token_number: o.token_number ?? null,
       items: itemsByOrder.get(o.id) ?? [],
       events: (eventsByOrder.get(o.id) ?? []).sort((a, b) =>
         a.created_at < b.created_at ? -1 : 1,
       ),
     }))
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+
+  return withDailyTokenFallback(assembled)
+}
+
+function istDayKey(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso))
+}
+
+function istDayBounds(now = new Date()): { start: string; end: string } {
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+  return {
+    start: new Date(`${day}T00:00:00+05:30`).toISOString(),
+    end: new Date(`${day}T24:00:00+05:30`).toISOString(),
+  }
+}
+
+/** Fill missing token_number from order sequence within each IST day. */
+function withDailyTokenFallback(orders: OrderWithItems[]): OrderWithItems[] {
+  const byDay = new Map<string, OrderWithItems[]>()
+  for (const o of orders) {
+    const key = istDayKey(o.created_at)
+    const list = byDay.get(key) ?? []
+    list.push(o)
+    byDay.set(key, list)
+  }
+
+  const assigned = new Map<string, number>()
+  for (const list of byDay.values()) {
+    const sorted = [...list].sort((a, b) =>
+      a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0,
+    )
+    const anyStored = sorted.some((o) => o.token_number != null && o.token_number > 0)
+    if (anyStored) {
+      let next = Math.max(0, ...sorted.map((o) => o.token_number ?? 0))
+      for (const o of sorted) {
+        if (o.token_number != null && o.token_number > 0) assigned.set(o.id, o.token_number)
+        else assigned.set(o.id, ++next)
+      }
+    } else {
+      sorted.forEach((o, i) => assigned.set(o.id, i + 1))
+    }
+  }
+
+  return orders.map((o) => ({
+    ...o,
+    token_number: assigned.get(o.id) ?? o.token_number,
+  }))
+}
+
+/** Next pickup token for today (Asia/Kolkata). Prefer DB RPC; fall back to max+1 / count. */
+async function allocateDailyTokenNumber(
+  sb: ReturnType<typeof getSupabase>,
+): Promise<number> {
+  const { data: rpcToken, error: rpcError } = await sb.rpc('next_order_token')
+  if (!rpcError && typeof rpcToken === 'number' && rpcToken > 0) return rpcToken
+  if (!rpcError && typeof rpcToken === 'string' && Number(rpcToken) > 0) {
+    return Number(rpcToken)
+  }
+
+  const { start, end } = istDayBounds()
+
+  const { data: rows, error: tokenErr } = await sb
+    .from('orders')
+    .select('token_number')
+    .gte('created_at', start)
+    .lt('created_at', end)
+    .not('token_number', 'is', null)
+    .order('token_number', { ascending: false })
+    .limit(1)
+
+  if (!tokenErr) {
+    const last = rows?.[0]?.token_number
+    return (typeof last === 'number' ? last : 0) + 1
+  }
+
+  const { count } = await sb
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', start)
+    .lt('created_at', end)
+
+  return (count ?? 0) + 1
 }
 
 async function upsertCustomerForOrder(order: {
@@ -496,6 +591,8 @@ export async function refreshOrderByToken(trackingToken: string): Promise<OrderW
 
   const assembled: OrderWithItems = {
     ...(orderRow as OrderWithItems),
+    customer_phone: (orderRow as Order).customer_phone ?? null,
+    token_number: (orderRow as Order).token_number ?? null,
     items: (itemRows ?? []) as OrderItem[],
     events: ((eventRows ?? []) as OrderStatusEvent[]).sort((a, b) =>
       a.created_at < b.created_at ? -1 : 1,
@@ -503,15 +600,21 @@ export async function refreshOrderByToken(trackingToken: string): Promise<OrderW
   }
 
   const prev = cache.orders.find((o) => o.id === assembled.id)
+  const merged = withDailyTokenFallback([
+    assembled,
+    ...cache.orders.filter((o) => o.id !== assembled.id),
+  ])
+  const resolved = merged.find((o) => o.id === assembled.id) ?? assembled
   const changed =
     !prev ||
-    prev.status !== assembled.status ||
-    prev.updated_at !== assembled.updated_at ||
-    prev.events.length !== assembled.events.length
+    prev.status !== resolved.status ||
+    prev.updated_at !== resolved.updated_at ||
+    prev.events.length !== resolved.events.length ||
+    prev.token_number !== resolved.token_number
 
-  cache.orders = [assembled, ...cache.orders.filter((o) => o.id !== assembled.id)]
+  cache.orders = merged
   if (changed) notify()
-  return assembled
+  return resolved
 }
 
 export function getMenu() {
@@ -524,8 +627,30 @@ export function getMenu() {
   }
 }
 
+/** Normalize to a 10-digit Indian mobile number. */
+export function normalizePickupPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return digits
+  if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
+    return digits.slice(2)
+  }
+  if (digits.length === 11 && digits.startsWith('0') && /^[6-9]/.test(digits.slice(1))) {
+    return digits.slice(1)
+  }
+  throw new Error('Enter a valid 10-digit phone number.')
+}
+
+export function formatPickupPhone(phone: string | null | undefined): string {
+  if (!phone) return ''
+  const digits = phone.replace(/\D/g, '')
+  const local = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits
+  if (local.length !== 10) return phone
+  return `+91 ${local.slice(0, 5)} ${local.slice(5)}`
+}
+
 export async function createOrder(input: {
   customer_name: string
+  customer_phone: string
   items: { menu_item_id: string; quantity: number }[]
   idempotency_key?: string
 }): Promise<OrderWithItems> {
@@ -534,6 +659,7 @@ export async function createOrder(input: {
   const state = getDemoState()
   const customerName = input.customer_name.trim()
   if (!customerName) throw new Error('Enter your name for pickup.')
+  const customerPhone = normalizePickupPhone(input.customer_phone)
 
   if (input.idempotency_key) {
     const existing = state.orders.find((o) => o.idempotency_key === input.idempotency_key)
@@ -557,25 +683,43 @@ export async function createOrder(input: {
   const prepSeconds = lines.reduce((sum, l) => sum + l.prep_time_seconds * l.quantity, 0)
   const now = new Date()
   const tracking_token = crypto.randomUUID()
+  const token_number = await allocateDailyTokenNumber(sb)
+  const orderPayload = {
+    customer_name: customerName,
+    customer_phone: customerPhone,
+    status: 'received' as const,
+    total_cents: total,
+    tracking_token,
+    token_number,
+    estimated_ready_at: new Date(now.getTime() + prepSeconds * 1000).toISOString(),
+    idempotency_key: input.idempotency_key ?? null,
+  }
 
-  const { data: order, error: orderError } = await sb
+  let { data: order, error: orderError } = await sb
     .from('orders')
-    .insert({
-      customer_name: customerName,
-      status: 'received',
-      total_cents: total,
-      tracking_token,
-      estimated_ready_at: new Date(now.getTime() + prepSeconds * 1000).toISOString(),
-      idempotency_key: input.idempotency_key ?? null,
-    })
+    .insert(orderPayload)
     .select('*')
     .single()
 
+  // Column may not exist until add_daily_token_number.sql is run — still show daily tokens.
+  if (orderError?.message?.includes('token_number')) {
+    const { token_number: _drop, ...withoutToken } = orderPayload
+    ;({ data: order, error: orderError } = await sb
+      .from('orders')
+      .insert(withoutToken)
+      .select('*')
+      .single())
+    if (order) order = { ...order, token_number }
+  }
+
   if (orderError || !order) {
+    const msg = orderError?.message || 'Could not create order'
     throw new Error(
       orderError?.message?.includes('row-level security')
         ? 'Supabase blocked the order write. Run supabase/enable_cafe_access.sql in the SQL Editor once.'
-        : orderError?.message || 'Could not create order',
+        : msg.includes('customer_phone')
+          ? 'Phone column missing. Run supabase/enable_cafe_access.sql in the SQL Editor once.'
+          : msg,
     )
   }
 
@@ -621,6 +765,7 @@ export async function createOrder(input: {
   cache.customers = customersFromOrders(cache.orders)
   notify()
   void refreshLiveData()
+  void import('@/lib/orderSms').then((m) => m.notifyOrderSms(assembled))
   return assembled
 }
 

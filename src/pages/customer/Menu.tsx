@@ -14,6 +14,7 @@ export function MenuPage() {
   const [query, setQuery] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const [pickupName, setPickupName] = useState('')
+  const [pickupPhone, setPickupPhone] = useState('')
   const [orderError, setOrderError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const deferredQuery = useDeferredValue(query.trim().toLowerCase())
@@ -27,6 +28,16 @@ export function MenuPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
   }, [reduceMotion])
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (count === 0) {
+      root.removeAttribute('data-menu-cart')
+    } else {
+      root.setAttribute('data-menu-cart', cartOpen ? 'open' : 'bar')
+    }
+    return () => root.removeAttribute('data-menu-cart')
+  }, [count, cartOpen])
 
   const qtyById = useMemo(() => {
     const map = new Map<string, number>()
@@ -59,11 +70,16 @@ export function MenuPage() {
       setOrderError('Enter your name for pickup.')
       return
     }
+    if (!pickupPhone.trim()) {
+      setOrderError('Enter your phone number.')
+      return
+    }
     setSubmitting(true)
     setOrderError(null)
     try {
       const order = await createOrder({
         customer_name: name,
+        customer_phone: pickupPhone,
         items: lines.map((l) => ({
           menu_item_id: l.menu_item_id,
           quantity: l.quantity,
@@ -72,6 +88,8 @@ export function MenuPage() {
       })
       clear()
       setCartOpen(false)
+      setPickupName('')
+      setPickupPhone('')
       navigate(`/orders/${order.tracking_token}`)
     } catch (e) {
       setOrderError(e instanceof Error ? e.message : 'Could not place order')
@@ -269,7 +287,7 @@ export function MenuPage() {
       </div>
 
       {count > 0 ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pe-20 ps-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6">
           <div className="pointer-events-auto w-full max-w-3xl border border-leaf/35 bg-ink/95 shadow-[0_-12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
             {cartOpen ? (
               <div className="max-h-[min(70vh,32rem)] overflow-y-auto p-4 sm:p-5">
@@ -349,6 +367,25 @@ export function MenuPage() {
                   aria-required="true"
                 />
 
+                <label className="mt-4 block text-sm font-medium text-steam" htmlFor="menu-pickup-phone">
+                  Phone number <span className="text-leaf">*</span>
+                </label>
+                <input
+                  id="menu-pickup-phone"
+                  type="tel"
+                  inputMode="numeric"
+                  value={pickupPhone}
+                  onChange={(e) => {
+                    setPickupPhone(e.target.value)
+                    if (orderError) setOrderError(null)
+                  }}
+                  placeholder="10-digit mobile number"
+                  className="field mt-2"
+                  autoComplete="tel"
+                  required
+                  aria-required="true"
+                />
+
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <span className="text-steam">Total</span>
                   <span className="font-display text-2xl font-semibold text-leaf">
@@ -364,7 +401,7 @@ export function MenuPage() {
 
                 <button
                   type="button"
-                  disabled={submitting || !pickupName.trim()}
+                  disabled={submitting || !pickupName.trim() || !pickupPhone.trim()}
                   onClick={() => void placeOrder()}
                   className="btn btn-primary mt-4 w-full"
                 >

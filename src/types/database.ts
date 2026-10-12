@@ -54,9 +54,12 @@ export interface RecipeIngredient {
 export interface Order {
   id: string
   customer_name: string
+  customer_phone: string | null
   status: OrderStatus
   total_cents: number
   tracking_token: string
+  /** Pickup counter for the day in IST (1, 2, 3…). */
+  token_number: number | null
   estimated_ready_at: string | null
   accepted_at: string | null
   preparing_at: string | null
@@ -67,6 +70,12 @@ export interface Order {
   created_at: string
   updated_at: string
   idempotency_key?: string
+}
+
+/** Short pickup token shown to customers / kitchen. */
+export function displayOrderToken(order: Pick<Order, 'token_number' | 'tracking_token'>): string {
+  if (order.token_number != null && order.token_number > 0) return String(order.token_number)
+  return order.tracking_token.slice(0, 8)
 }
 
 export interface OrderItem {

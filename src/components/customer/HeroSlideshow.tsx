@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
 const SLIDES = [
-  { src: '/cafe/hero/01-dining.jpg', alt: 'Fine dining table setting' },
-  { src: '/cafe/hero/06-mkc-interior.jpg', alt: 'Maña Katha café interior' },
-  { src: '/cafe/hero/08-latte.jpg', alt: 'Coffee toast at the table' },
   { src: '/cafe/hero/10-brunch.jpg', alt: 'Plated café dishes' },
+  { src: '/cafe/hero/06-mkc-interior.jpg', alt: 'Maña Katha café interior' },
+  { src: '/cafe/hero/08-latte.jpg', alt: 'Coffee toast at Maña Katha' },
   { src: '/cafe/hero/09-rooftop.jpg', alt: 'Warm evening dining room' },
   { src: '/cafe/hero/12-friends.jpg', alt: 'Modern café seating' },
 ] as const

@@ -111,7 +111,7 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div className="chat-widget-dock pointer-events-none fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open ? (
         <section
           className="pointer-events-auto flex h-[min(32rem,calc(100svh-6.5rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border border-line bg-ink/95 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
@@ -234,12 +234,13 @@ export function ChatWidget() {
 
       <button
         type="button"
-        className="pointer-events-auto btn btn-primary min-h-12 rounded-md px-5 shadow-[0_12px_30px_rgba(240,193,75,0.25)]"
+        className="chat-widget-trigger pointer-events-auto btn btn-primary min-h-12 rounded-md px-4 shadow-[0_12px_30px_rgba(240,193,75,0.25)] sm:px-5"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={undefined}
       >
-        {open ? 'Hide chat' : 'Ask Maña Katha'}
+        <span className="sm:hidden">{open ? 'Hide' : 'Ask'}</span>
+        <span className="hidden sm:inline">{open ? 'Hide chat' : 'Ask Maña Katha'}</span>
       </button>
     </div>
   )

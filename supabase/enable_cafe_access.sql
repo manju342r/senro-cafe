@@ -1,5 +1,9 @@
--- Run once in Supabase Dashboard → SQL Editor (project deqksgtrsloiqspsfxdb)
+-- Run once in Supabase Dashboard → SQL Editor (mana-katha / hsvwjjutoxjvirehqktv)
 -- Enables public café ordering + staff tools with the anon key.
+-- If menu IDs fail as UUID, also run supabase/fix_text_menu_ids.sql then seed.
+
+-- Pickup phone on customer orders (safe to re-run)
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS customer_phone TEXT;
 
 -- Event booking inquiries from the website
 CREATE TABLE IF NOT EXISTS public.event_bookings (
