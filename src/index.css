@@ -382,4 +382,16 @@
       transform-origin: top;
     }
   }
+
+  /* Keep chat clear of the menu cart bar on small screens */
+  @media (max-width: 639px) {
+    [data-menu-cart='bar'] .chat-widget-dock {
+      bottom: 5.75rem;
+    }
+
+    [data-menu-cart='open'] .chat-widget-trigger {
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
 }

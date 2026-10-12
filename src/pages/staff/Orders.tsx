@@ -4,6 +4,7 @@ import { useDemoState } from '@/hooks/useDemo'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import {
   ORDER_TRANSITIONS,
+  displayOrderToken,
   formatCents,
   type OrderStatus,
   type OrderWithItems,
@@ -117,7 +118,17 @@ export function StaffOrdersPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="type-section text-foam">{order.customer_name}</p>
+                      <p className="font-display text-4xl font-semibold leading-none text-leaf">
+                        #{displayOrderToken(order)}
+                      </p>
+                      <p className="type-section mt-2 text-foam">{order.customer_name}</p>
+                      {order.customer_phone ? (
+                        <p className="mt-0.5 text-sm text-leaf">
+                          <a href={`tel:+91${order.customer_phone}`} className="hover:underline">
+                            +91 {order.customer_phone}
+                          </a>
+                        </p>
+                      ) : null}
                       <p className="text-xs text-steam">
                         {Math.floor(age / 60)}m {String(Math.floor(age % 60)).padStart(2, '0')}s
                         ago · {formatCents(order.total_cents)}
@@ -165,7 +176,17 @@ export function StaffOrdersPage() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="type-section text-foam">{selected.customer_name}</h2>
+                <p className="font-display text-5xl font-semibold leading-none text-leaf">
+                  #{displayOrderToken(selected)}
+                </p>
+                <h2 className="type-section mt-3 text-foam">{selected.customer_name}</h2>
+                {selected.customer_phone ? (
+                  <p className="mt-1 text-sm text-leaf">
+                    <a href={`tel:+91${selected.customer_phone}`} className="hover:underline">
+                      +91 {selected.customer_phone}
+                    </a>
+                  </p>
+                ) : null}
                 <div className="mt-2">
                   <StatusBadge status={selected.status} />
                 </div>

@@ -1,5 +1,5 @@
 import { orderTrackingUrl } from '@/lib/orderRef'
-import { formatCents, type OrderWithItems } from '@/types/database'
+import { displayOrderToken, formatCents, type OrderWithItems } from '@/types/database'
 
 const INK = '#1a1210'
 const FOREST = '#2a1f1a'
@@ -114,7 +114,7 @@ async function renderReceiptCanvas(order: OrderWithItems): Promise<HTMLCanvasEle
   const width = 794
   const pad = 48
   const contentW = width - pad * 2
-  const tokenId = order.tracking_token
+  const tokenId = displayOrderToken(order)
   const when = new Date(order.created_at).toLocaleString('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -203,8 +203,11 @@ async function renderReceiptCanvas(order: OrderWithItems): Promise<HTMLCanvasEle
 
   // Meta block
   const meta: [string, string][] = [
-    ['Token ID', tokenId],
+    ['Token', tokenId],
     ['Name', order.customer_name],
+    ...(order.customer_phone
+      ? ([['Phone', `+91 ${order.customer_phone}`]] as [string, string][])
+      : []),
     ['Placed', when],
     ['Status', order.status],
   ]
@@ -214,12 +217,15 @@ async function renderReceiptCanvas(order: OrderWithItems): Promise<HTMLCanvasEle
     ctx.font = '500 11px Outfit, system-ui, sans-serif'
     ctx.fillText(label.toUpperCase(), pad, y)
     ctx.fillStyle = FOAM
-    ctx.font = label === 'Token ID' ? '600 13px ui-monospace, monospace' : '500 15px Outfit, system-ui, sans-serif'
+    ctx.font =
+      label === 'Token'
+        ? '700 36px "Cormorant Garamond", Georgia, serif'
+        : '500 15px Outfit, system-ui, sans-serif'
     const valueLines = wrapText(ctx, value, contentW)
-    let vy = y + 18
+    let vy = y + (label === 'Token' ? 34 : 18)
     for (const line of valueLines) {
       ctx.fillText(line, pad, vy)
-      vy += 18
+      vy += label === 'Token' ? 36 : 18
     }
     y = vy + 14
   }
@@ -294,7 +300,7 @@ async function renderReceiptCanvas(order: OrderWithItems): Promise<HTMLCanvasEle
   y += 20
   ctx.fillStyle = STEAM
   ctx.font = '500 12px Outfit, system-ui, sans-serif'
-  ctx.fillText('Keep this token ID if you close the page.', pad, y)
+  ctx.fillText('Tell this token at the counter. Tracking link keeps your order page.', pad, y)
 
   // Bottom gold rule
   ctx.fillStyle = LEAF
@@ -315,7 +321,7 @@ export async function downloadOrderReceiptPdf(order: OrderWithItems): Promise<vo
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `mana-katha-${order.tracking_token}.pdf`
+  a.download = `mana-katha-token-${displayOrderToken(order)}.pdf`
   a.click()
   URL.revokeObjectURL(url)
 }

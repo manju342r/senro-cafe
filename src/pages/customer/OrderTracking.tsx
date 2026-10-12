@@ -10,7 +10,7 @@ import {
   rememberOrder,
 } from '@/lib/orderRef'
 import { downloadOrderReceiptPdf } from '@/lib/orderReceiptPdf'
-import { formatCents, type OrderStatus } from '@/types/database'
+import { displayOrderToken, formatCents, type OrderStatus } from '@/types/database'
 
 const STEPS: OrderStatus[] = ['received', 'accepted', 'preparing', 'ready', 'completed']
 const LIVE_POLL_MS = 2500
@@ -79,7 +79,9 @@ export function OrderTrackingPage() {
                     to={`/orders/${o.tracking_token}`}
                     className="flex flex-col gap-1 text-sm hover:text-leaf sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
                   >
-                    <span className="break-all font-semibold text-leaf">{o.tracking_token}</span>
+                    <span className="font-semibold text-leaf">
+                      Token {o.token_label ?? o.tracking_token.slice(0, 8)}
+                    </span>
                     <span className="text-steam">{o.customer_name}</span>
                     <span className="tabular-nums text-foam">{formatCents(o.total_cents)}</span>
                   </Link>
@@ -95,7 +97,7 @@ export function OrderTrackingPage() {
     )
   }
 
-  const tokenId = order.tracking_token
+  const tokenId = displayOrderToken(order)
   const trackUrl = orderTrackingUrl(order.tracking_token)
   const activeIndex = order.status === 'cancelled' ? -1 : STEPS.indexOf(order.status)
   const waitMins = order.estimated_ready_at
@@ -120,6 +122,9 @@ export function OrderTrackingPage() {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <p className="eyebrow">Order placed</p>
         <h1 className="type-page mt-2 text-leaf">{order.customer_name}</h1>
+        {order.customer_phone ? (
+          <p className="mt-2 text-steam">+91 {order.customer_phone}</p>
+        ) : null}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <StatusBadge status={order.status} />
           <span className="font-medium text-steam">{formatCents(order.total_cents)}</span>
@@ -127,17 +132,17 @@ export function OrderTrackingPage() {
       </motion.div>
 
       <section className="mt-8 border border-leaf/40 bg-leaf/10 p-5">
-        <p className="eyebrow text-leaf">Your token ID</p>
-        <p className="mt-2 break-all font-mono text-lg font-semibold tracking-wide text-leaf sm:text-xl">
+        <p className="eyebrow text-leaf">Your token</p>
+        <p className="mt-2 font-display text-6xl font-semibold leading-none tracking-tight text-leaf sm:text-7xl">
           {tokenId}
         </p>
         <p className="mt-3 text-sm text-steam">
-          Save this token ID. Use it to track your order if you close this page. Download a PDF
-          anytime with the button below.
+          Today&apos;s pickup number — tell this at the counter. Resets every day. Keep the tracking
+          link below if you close this page.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <button type="button" className="btn btn-primary" onClick={() => void copyToken()}>
-            {copied ? 'Copied' : 'Copy token ID'}
+            {copied ? 'Copied' : 'Copy token'}
           </button>
           <button
             type="button"

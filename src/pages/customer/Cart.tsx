@@ -7,6 +7,7 @@ import { formatCents } from '@/types/database'
 export function CartPage() {
   const { lines, totalCents, setQuantity, removeItem, clear } = useCart()
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
@@ -18,11 +19,16 @@ export function CartPage() {
       setError('Enter your name for pickup.')
       return
     }
+    if (!phone.trim()) {
+      setError('Enter your phone number.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
       const order = await createOrder({
         customer_name: pickup,
+        customer_phone: phone,
         items: lines.map((l) => ({
           menu_item_id: l.menu_item_id,
           quantity: l.quantity,
@@ -114,6 +120,24 @@ export function CartPage() {
           aria-required="true"
           autoComplete="name"
         />
+        <label className="mt-4 block text-sm font-medium text-steam" htmlFor="customer-phone">
+          Phone number <span className="text-leaf">*</span>
+        </label>
+        <input
+          id="customer-phone"
+          type="tel"
+          inputMode="numeric"
+          value={phone}
+          onChange={(e) => {
+            setPhone(e.target.value)
+            if (error) setError(null)
+          }}
+          placeholder="10-digit mobile number"
+          className="field mt-2"
+          required
+          aria-required="true"
+          autoComplete="tel"
+        />
         <div className="mt-6 flex items-center justify-between">
           <span className="text-steam">Total</span>
           <span className="font-display text-3xl font-semibold text-leaf">
@@ -127,7 +151,7 @@ export function CartPage() {
         )}
         <button
           type="button"
-          disabled={submitting || !name.trim()}
+          disabled={submitting || !name.trim() || !phone.trim()}
           onClick={placeOrder}
           className="btn btn-primary mt-6 w-full"
         >
