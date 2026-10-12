@@ -695,21 +695,33 @@ export async function createOrder(input: {
     idempotency_key: input.idempotency_key ?? null,
   }
 
-  // Older Supabase projects may lack phone / token columns — strip and retry.
-  let insertPayload: Record<string, unknown> = { ...orderPayload }
+  // Production may still be on an older Supabase without phone/token columns.
+  const coreOrderPayload = {
+    customer_name: customerName,
+    status: 'received' as const,
+    total_cents: total,
+    tracking_token,
+    estimated_ready_at: new Date(now.getTime() + prepSeconds * 1000).toISOString(),
+    idempotency_key: input.idempotency_key ?? null,
+  }
+
   let { data: order, error: orderError } = await sb
     .from('orders')
-    .insert(insertPayload)
+    .insert(orderPayload)
     .select('*')
     .single()
 
-  for (const col of ['token_number', 'customer_phone'] as const) {
-    if (!orderError?.message?.includes(col)) continue
-    const { [col]: _drop, ...rest } = insertPayload
-    insertPayload = rest
+  const missingCol =
+    orderError &&
+    (/schema cache|does not exist|Could not find/i.test(orderError.message) ||
+      orderError.code === 'PGRST204' ||
+      orderError.code === '42703')
+
+  if (missingCol) {
+    // Retry without optional columns so checkout still works on older DBs.
     ;({ data: order, error: orderError } = await sb
       .from('orders')
-      .insert(insertPayload)
+      .insert(coreOrderPayload)
       .select('*')
       .single())
   }
