@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import { listOrders, transitionOrder } from '@/lib/demoStore'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { listOrders, refreshLiveData, transitionOrder } from '@/lib/demoStore'
 import { useDemoState } from '@/hooks/useDemo'
+import {
+  isOrderAlertSoundUnlocked,
+  playNewOrderRing,
+  unlockOrderAlertSound,
+} from '@/lib/orderAlertSound'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import {
   ORDER_TRANSITIONS,
@@ -9,6 +14,8 @@ import {
   type OrderStatus,
   type OrderWithItems,
 } from '@/types/database'
+
+const ORDER_POLL_MS = 4000
 
 const ACTION_LABELS: Partial<Record<OrderStatus, string>> = {
   accepted: 'Accept',
@@ -27,16 +34,68 @@ function estPrep(order: OrderWithItems) {
 }
 
 export function StaffOrdersPage() {
-  useDemoState()
+  const live = useDemoState()
   const [, setTick] = useState(0)
+  const knownOrderIds = useRef<Set<string> | null>(null)
+  const [soundOn, setSoundOn] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 15000)
     return () => window.clearInterval(id)
   }, [])
 
+  // Keep the queue fresh even if Realtime is slow/offline on this project.
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === 'hidden') return
+      void refreshLiveData()
+    }
+    void tick()
+    const id = window.setInterval(tick, ORDER_POLL_MS)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void tick()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
+
+  // Browsers block sound until a gesture — unlock on first click/tap on this page.
+  useEffect(() => {
+    const unlock = () => {
+      void unlockOrderAlertSound().then(() => setSoundOn(isOrderAlertSoundUnlocked()))
+    }
+    unlock()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
   const orders = listOrders()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+
+  // Ring once when a brand-new received order appears (skip the first hydrate).
+  useEffect(() => {
+    if (!live.ready) return
+    const ids = new Set(orders.map((o) => o.id))
+    if (knownOrderIds.current === null) {
+      knownOrderIds.current = ids
+      return
+    }
+    const freshReceived = orders.filter(
+      (o) => o.status === 'received' && !knownOrderIds.current!.has(o.id),
+    )
+    if (freshReceived.length > 0) {
+      void playNewOrderRing().then(() => setSoundOn(isOrderAlertSoundUnlocked()))
+    }
+    knownOrderIds.current = new Set([...knownOrderIds.current, ...ids])
+  }, [live.ready, orders])
 
   const active = orders.filter((o) => !['completed', 'cancelled'].includes(o.status))
   const selected = orders.find((o) => o.id === selectedId) ?? null
@@ -68,6 +127,12 @@ export function StaffOrdersPage() {
     }
   }
 
+  async function enableSound() {
+    await unlockOrderAlertSound()
+    await playNewOrderRing()
+    setSoundOn(isOrderAlertSoundUnlocked())
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-8 grid gap-3 sm:grid-cols-3">
@@ -79,10 +144,21 @@ export function StaffOrdersPage() {
         />
       </div>
 
-      <h1 className="type-page text-leaf">Live queue</h1>
-      <p className="mt-2 text-steam">
-        Overdue when age exceeds estimated prep · sold-out toggles sync to the customer menu.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="type-page text-leaf">Live queue</h1>
+          <p className="mt-2 text-steam">
+            Overdue when age exceeds estimated prep · new orders ring this screen.
+          </p>
+        </div>
+        <button
+          type="button"
+          className={`btn text-sm ${soundOn ? 'btn-secondary' : 'btn-primary'}`}
+          onClick={() => void enableSound()}
+        >
+          {soundOn ? 'Sound on — test ring' : 'Enable order sound'}
+        </button>
+      </div>
       {error && (
         <p className="mt-3 text-sm text-red-300" role="alert">
           {error}
